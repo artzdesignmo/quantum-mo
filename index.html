@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="silver">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Mo — Pocket Quantum Circuit Lab</title>
+<meta name="description" content="Drag gates onto a quantum circuit and watch superposition, phase and entanglement happen live. Real math, zero backend, runs offline.">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ============ Quantum Mo · theme system (OpenX spec: default silver, 3-way toggle, localStorage) ============ */
+:root{
+  --r:14px;
+}
+html[data-theme="silver"]{--bg:#e9e9e7;--panel:#f5f5f3;--panel2:#efefec;--ink:#191919;--muted:#6f6f6a;--line:#d5d5d0;--accent:#5b5bd6;--accent2:#9d4edd;--good:#1d9e6b;--warn:#d66a1f;--chip:#ffffff;--shadow:0 6px 24px rgba(30,30,40,.10)}
+html[data-theme="white"]{--bg:#ffffff;--panel:#f8f8f8;--panel2:#f1f1f1;--ink:#161616;--muted:#777;--line:#e2e2e2;--accent:#4a4ad0;--accent2:#9333d6;--good:#178a5c;--warn:#c25e17;--chip:#ffffff;--shadow:0 6px 24px rgba(30,30,40,.08)}
+html[data-theme="black"]{--bg:#0b0b0d;--panel:#141417;--panel2:#1b1b20;--ink:#f0f0f2;--muted:#9a9aa2;--line:#26262c;--accent:#8f8fff;--accent2:#c77dff;--good:#3ddc97;--warn:#ff9e5e;--chip:#1e1e23;--shadow:0 6px 24px rgba(0,0,0,.5)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:'Noto Sans TC',sans-serif;min-height:100vh;transition:background .3s,color .3s}
+h1,h2,h3,.dela{font-family:'Dela Gothic One','Noto Sans TC',sans-serif;font-weight:400;letter-spacing:.02em}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+/* top bar */
+#topbar{position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{font-family:'Dela Gothic One';font-size:19px}
+.brand small{font-family:'Noto Sans TC';font-size:11px;color:var(--muted);margin-left:8px;letter-spacing:.14em}
+.hbtns{display:flex;gap:8px;align-items:center}
+.tdots{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:5px 8px}
+.tdot{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.tdot[data-t="white"]{background:#fff;border-color:#ccc}
+.tdot[data-t="silver"]{background:#cfcfca;border-color:#aaa}
+.tdot[data-t="black"]{background:#111}
+.tdot.on{outline:2px solid var(--accent);outline-offset:1px}
+.ibtn{min-width:38px;height:34px;padding:0 10px;border-radius:17px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;font-size:13px;font-family:inherit}
+.ibtn:hover{border-color:var(--accent)}
+/* hero */
+#hero{padding:44px 0 8px;text-align:center}
+#hero h1{font-size:clamp(40px,7vw,76px);line-height:1.05}
+#hero h1 .q{background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+#hero p{color:var(--muted);margin-top:12px;font-size:15px;max-width:640px;margin-left:auto;margin-right:auto}
+#hero .fine{font-size:12px;margin-top:8px;color:var(--muted)}
+/* studio grid */
+#studio{display:grid;grid-template-columns:172px 1fr 330px;gap:16px;margin-top:26px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.card h3{font-size:13px;margin-bottom:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+html[lang="zh"] .card h3{letter-spacing:.2em}
+/* gate palette */
+#palette{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gate{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;font-family:'Dela Gothic One';font-size:17px;user-select:none;transition:transform .12s,border-color .12s}
+.gate small{font-family:'Noto Sans TC';font-size:9px;color:var(--muted);margin-top:2px}
+.gate:hover{transform:translateY(-2px);border-color:var(--accent)}
+.gate.armed{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.gate.wide{grid-column:span 2;aspect-ratio:auto;padding:8px 0}
+.gate.cnot{background:linear-gradient(135deg,var(--chip),color-mix(in srgb,var(--accent) 14%,var(--chip)))}
+/* circuit */
+#circuitCard{overflow:hidden}
+#presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.preset{padding:7px 13px;border-radius:16px;border:1px solid var(--line);background:var(--chip);font-size:12px;cursor:pointer;font-family:inherit;color:var(--ink)}
+.preset:hover{border-color:var(--accent);color:var(--accent)}
+#circuit{position:relative;padding:10px 6px}
+.wire{position:relative;height:64px}
+.wire .line{position:absolute;left:0;right:0;top:50%;height:2px;background:var(--line);transform:translateY(-50%)}
+.wire .qlabel{position:absolute;left:-2px;top:50%;transform:translateY(-50%);font-family:'Dela Gothic One';font-size:13px;background:var(--panel);padding:2px 6px;border:1px solid var(--line);border-radius:8px;z-index:2}
+.slots{position:absolute;left:52px;right:6px;top:0;bottom:0;display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.slot{border:1.5px dashed transparent;border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:56px;transition:background .15s,border-color .15s}
+.slot.over{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent)}
+.slot .pgate{width:100%;height:52px;border-radius:10px;background:var(--chip);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Dela Gothic One';font-size:16px;cursor:pointer;position:relative;box-shadow:var(--shadow)}
+.slot .pgate .cx{position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;background:var(--warn);color:#fff;font-size:11px;display:none;align-items:center;justify-content:center;line-height:1}
+.slot .pgate:hover .cx{display:flex}
+.slot .pgate.cnot2{grid-row:span 1;background:linear-gradient(135deg,var(--chip),color-mix(in srgb,var(--accent) 16%,var(--chip)))}
+.slot .pgate.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+#stepbar{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+#stepbar input[type=range]{flex:1;accent-color:var(--accent)}
+#stepLbl{font-size:12px;color:var(--muted);min-width:86px;text-align:right;font-variant-numeric:tabular-nums}
+.tbtn{padding:8px 14px;border-radius:18px;border:1px solid var(--line);background:var(--chip);color:var(--ink);font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.tbtn:hover{border-color:var(--accent);color:var(--accent)}
+.tbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.tbtn.primary:hover{filter:brightness(1.1);color:#fff}
+/* readouts */
+#readouts{display:flex;flex-direction:column;gap:16px}
+.state-row{display:grid;grid-template-columns:44px 1fr 26px;gap:8px;align-items:center;margin:7px 0;font-size:12px}
+.state-row .ket{font-family:'Dela Gothic One';font-size:12px}
+.ampbar{height:14px;background:var(--panel2);border-radius:7px;overflow:hidden;position:relative}
+.ampbar i{display:block;height:100%;border-radius:7px;transition:width .45s cubic-bezier(.2,.8,.2,1)}
+.pdot{width:18px;height:18px;border-radius:50%;border:1px solid var(--line)}
+.state-row .cval{grid-column:2;font-family:ui-monospace,monospace;font-size:10.5px;color:var(--muted);margin-top:2px}
+.prow{display:grid;grid-template-columns:44px 1fr 46px;gap:8px;align-items:center;margin:7px 0;font-size:12px}
+.prow .ket{font-family:'Dela Gothic One';font-size:12px}
+.prow .pct{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.bloch-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bloch{text-align:center}
+.bloch canvas{width:100%;max-width:150px;aspect-ratio:1;cursor:grab;border-radius:10px;background:var(--panel2)}
+.bloch .bl{font-size:11px;color:var(--muted);margin-top:4px}
+#entWrap{margin-top:6px}
+#entBar{height:10px;background:var(--panel2);border-radius:5px;overflow:hidden}
+#entBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:5px;transition:width .5s}
+#entLbl{font-size:12px;color:var(--muted);margin-top:6px;display:flex;justify-content:space-between}
+/* sampler */
+#shots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.shot{background:var(--panel2);border-radius:10px;padding:10px 6px;text-align:center}
+.shot .sk{font-family:'Dela Gothic One';font-size:13px}
+.shot .sb{height:64px;display:flex;align-items:flex-end;justify-content:center;margin:6px 0}
+.shot .sb i{display:block;width:60%;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:4px 4px 0 0;transition:height .6s cubic-bezier(.2,.8,.2,1);min-height:2px}
+.shot .sc{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* learn */
+#learn{margin-top:26px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.lcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}
+.lcard h3{font-size:14px;margin-bottom:8px}
+.lcard h3 .n{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;align-items:center;justify-content:center;margin-right:8px;font-family:'Noto Sans TC'}
+.lcard p{font-size:13px;color:var(--muted);line-height:1.7}
+#glossary{margin-top:16px}
+#glossary .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+.gitem{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;transition:transform .12s}
+.gitem:hover{transform:translateY(-2px);border-color:var(--accent)}
+.gitem .gs{font-family:'Dela Gothic One';font-size:18px;color:var(--accent)}
+.gitem .gn{font-size:12px;margin:4px 0;color:var(--ink)}
+.gitem .gm{font-family:ui-monospace,monospace;font-size:10px;color:var(--muted);line-height:1.6;white-space:pre-line}
+#gmodal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:20px}
+#gmodal.open{display:flex}
+#gmodal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:420px;width:100%;padding:24px;box-shadow:var(--shadow)}
+#gmodal .box h3{font-size:18px;margin-bottom:6px}
+#gmodal .box .gm{font-family:ui-monospace,monospace;font-size:12px;background:var(--panel2);border-radius:8px;padding:10px;margin:10px 0;white-space:pre-line;line-height:1.7}
+#gmodal .box p{font-size:13px;color:var(--muted);line-height:1.7}
+#gmodal .box .tbtn{margin-top:14px}
+/* footer */
+footer{margin:40px 0 30px;text-align:center;color:var(--muted);font-size:12px;line-height:2}
+footer a{color:var(--accent)}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;z-index:200;transition:transform .3s;opacity:0}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+@media(max-width:1020px){
+  #studio{grid-template-columns:1fr 1fr}
+  #readouts{grid-column:span 2}
+  #learn{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  #studio{grid-template-columns:1fr}
+  #readouts{grid-column:span 1}
+  #palette{grid-template-columns:repeat(4,1fr)}
+  .gate.wide{grid-column:span 2}
+  .slots{left:46px}
+  #hero{padding-top:30px}
+}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <div class="brand">Quantum Mo<small>QUANTUM LAB</small></div>
+  <div class="hbtns">
+    <div class="tdots" title="theme">
+      <span class="tdot" data-t="white" title="white"></span><span class="tdot" data-t="silver" title="silver"></span><span class="tdot" data-t="black" title="black"></span>
+    </div>
+    <button class="ibtn" id="langBtn">文</button>
+  </div>
+</div>
+<div class="wrap">
+  <section id="hero">
+    <h1><span class="q">Quantum</span> Mo</h1>
+    <p data-en="Drag gates onto the circuit and watch superposition, phase and entanglement happen live — real quantum math, running 100% in your browser." data-zh="將閘拖入電路，即時睇住疊加、相位同糾纏發生——真正嘅量子數學，100% 喺你瀏覽器入面跑。">Drag gates onto the circuit and watch superposition, phase and entanglement happen live — real quantum math, running 100% in your browser.</p>
+    <p class="fine" data-en="An educational simulator of ideal qubits (state-vector math). It is not a real quantum computer — and it never claims to be." data-zh="理想量子位元嘅教育模擬器（狀態向量數學）。佢唔係真正嘅量子電腦——亦從不聲稱係。">An educational simulator of ideal qubits (state-vector math). It is not a real quantum computer — and it never claims to be.</p>
+  </section>
+
+  <section id="studio">
+    <div class="card">
+      <h3 data-en="Gates" data-zh="量子閘">Gates</h3>
+      <div id="palette"></div>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6" data-en="Drag onto the circuit — or tap a gate, then tap a slot." data-zh="拖入電路——或者撳一下個閘，再撳個格。">Drag onto the circuit — or tap a gate, then tap a slot.</p>
+    </div>
+
+    <div class="card" id="circuitCard">
+      <h3 data-en="Circuit · 2 qubits" data-zh="電路 · 2 個量子位元">Circuit · 2 qubits</h3>
+      <div id="presets"></div>
+      <div id="circuit"></div>
+      <div id="stepbar">
+        <button class="tbtn" id="playBtn">▶</button>
+        <input type="range" id="stepRange" min="0" max="0" value="0" step="1">
+        <span id="stepLbl">0 / 0</span>
+        <button class="tbtn" id="clearBtn" data-en="Clear" data-zh="清空">Clear</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="tbtn" id="diceBtn" data-en="🎲 Surprise me" data-zh="🎲 隨機電路">🎲 Surprise me</button>
+        <button class="tbtn" id="linkBtn" data-en="🔗 Copy circuit link" data-zh="🔗 複製電路連結">🔗 Copy circuit link</button>
+        <button class="tbtn" id="jsonBtn" data-en="⬇ JSON" data-zh="⬇ JSON">⬇ JSON</button>
+      </div>
+    </div>
+
+    <div id="readouts">
+      <div class="card">
+        <h3 data-en="State vector" data-zh="狀態向量">State vector</h3>
+        <div id="stateVec"></div>
+      </div>
+      <div class="card">
+        <h3 data-en="Measurement probabilities" data-zh="測量機率">Measurement probabilities</h3>
+        <div id="probs"></div>
+      </div>
+      <div class="card">
+        <h3 data-en="Bloch spheres · drag to spin" data-zh="布洛赫球 · 拖曳旋轉">Bloch spheres · drag to spin</h3>
+        <div class="bloch-wrap">
+          <div class="bloch"><canvas id="bloch0" width="300" height="300"></canvas><div class="bl">q₀</div></div>
+          <div class="bloch"><canvas id="bloch1" width="300" height="300"></canvas><div class="bl">q₁</div></div>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6" data-en="Tip: when qubits entangle, each arrow shrinks — an arrowless qubit has no state of its own." data-zh="小貼士：量子位元糾纏嗰陣，支箭會縮細——冇箭即係冇咗獨立狀態。">Tip: when qubits entangle, each arrow shrinks — an arrowless qubit has no state of its own.</p>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="tbtn" id="pngBtn" data-en="⬇ Bloch PNG" data-zh="⬇ 布洛赫球 PNG">⬇ Bloch PNG</button>
+        </div>
+        <div id="entWrap">
+          <div id="entBar"><i></i></div>
+          <div id="entLbl"><span data-en="Entanglement" data-zh="糾纏度">Entanglement</span><span id="entVal">0%</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 data-en="Measure · 1000 shots" data-zh="測量 · 1000 次">Measure · 1000 shots</h3>
+        <button class="tbtn primary" id="shootBtn" data-en="▶ Run 1000 shots" data-zh="▶ 跑 1000 次">▶ Run 1000 shots</button>
+        <div id="shots"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="learn">
+    <div class="lcard"><h3><span class="n">1</span><span data-en="Qubit" data-zh="量子位元">Qubit</span></h3>
+      <p data-en="A qubit is not just 0 or 1 — it can be a blend of both at once. The arrow inside each Bloch sphere is the qubit's state: up means 0, down means 1, anywhere else means a true quantum blend." data-zh="量子位元唔只係 0 或 1——佢可以同時係兩者嘅混合。布洛赫球入面支箭就係佢嘅狀態：向上係 0，向下係 1，其他位置就係真正嘅量子混合。">A qubit is not just 0 or 1 — it can be a blend of both at once. The arrow inside each Bloch sphere is the qubit's state: up means 0, down means 1, anywhere else means a true quantum blend.</p></div>
+    <div class="lcard"><h3><span class="n">2</span><span data-en="Superposition" data-zh="疊加">Superposition</span></h3>
+      <p data-en="Drop an H gate on a wire and the qubit spreads across 0 and 1 — the probability bars split 50/50. Measure it 1000 times and the histogram lands roughly half-half, like a perfect coin." data-zh="將 H 閘放上條線，量子位元就會散開橫跨 0 同 1——機率條變成 50/50。測量 1000 次，直方圖會大約一半一半，好似一枚完美嘅銀仔。">Drop an H gate on a wire and the qubit spreads across 0 and 1 — the probability bars split 50/50. Measure it 1000 times and the histogram lands roughly half-half, like a perfect coin.</p></div>
+    <div class="lcard"><h3><span class="n">3</span><span data-en="Entanglement" data-zh="糾纏">Entanglement</span></h3>
+      <p data-en="H on the top wire plus CNOT links the two qubits into a Bell pair: neither has its own state any more (watch its Bloch arrow shrink), yet measuring one instantly decides the other. Try the Bell preset." data-zh="上面條線放 H 再加 CNOT，兩個量子位元就會連成貝爾對：佢哋各自冇咗獨立狀態（睇住支布洛赫箭縮細），但測量其中一個會即刻決定另一個。試下個 Bell 預設電路。">H on the top wire plus CNOT links the two qubits into a Bell pair: neither has its own state any more (watch its Bloch arrow shrink), yet measuring one instantly decides the other. Try the Bell preset.</p></div>
+  </section>
+
+  <section id="glossary" class="card" style="margin-top:16px">
+    <h3 data-en="Gate glossary · tap for the math" data-zh="量子閘圖鑑 · 撳入去睇數學">Gate glossary · tap for the math</h3>
+    <div class="ggrid" id="ggrid"></div>
+  </section>
+
+  <footer>
+    <div class="dela" style="font-size:15px">Quantum Mo</div>
+    <div>MIT License · educational simulator · runs fully offline</div>
+    <div>Built in the open · <a href="https://buymeacoffee.com/whynotartmoney" target="_blank" rel="noopener">Buy Me a Coffee — @whynotartmoney</a></div>
+  </footer>
+</div>
+<div id="gmodal"><div class="box"><h3 id="gmTitle"></h3><div class="gm" id="gmMath"></div><p id="gmDesc"></p><button class="tbtn" id="gmClose">OK</button></div></div>
+<div id="toast"></div>
+<script>
+(()=>{"use strict";
+/* ================= 1. Complex-number engine (original) =================
+   A complex number is [re, im]. The 2-qubit state is 4 amplitudes in the
+   order |q1 q0> with index = q0 + 2*q1 (q0 = top wire). */
+const cx={
+  add:(a,b)=>[a[0]+b[0],a[1]+b[1]],
+  mul:(a,b)=>[a[0]*b[0]-a[1]*b[1],a[0]*b[1]+a[1]*b[0]],
+  conj:a=>[-0+a[0],-a[1]],
+  abs2:a=>a[0]*a[0]+a[1]*a[1],
+  arg:a=>Math.atan2(a[1],a[0]),
+  str:a=>{const r=a[0],i=a[1];const f=v=>(Math.abs(v)<0.0005?0:v).toFixed(3);
+    return f(r)+(i<0?" − ":" + ")+f(Math.abs(i))+"i";},
+  hue:a=>((cx.arg(a)*180/Math.PI)+360)%360
+};
+const SQRT1_2=Math.SQRT1_2, I=[0,1];
+/* Single-qubit gate matrices as [[a,b],[c,d]] acting on [amp0,amp1]. */
+const GATES={
+  H:{sym:"H",wide:false,name:{en:"Hadamard — superposition maker",zh:"Hadamard —— 疊加製造機"},
+     mat:()=>[[[SQRT1_2,0],[SQRT1_2,0]],[[SQRT1_2,0],[-SQRT1_2,0]]],
+     math:"1/√2 · [ 1   1 ]\n        [ 1  −1 ]",
+     desc:{en:"Puts a qubit into an equal blend of 0 and 1. The single most-used gate in quantum computing.",zh:"將量子位元變成 0 同 1 嘅均等混合。量子計算入面最常用嘅閘。"}},
+  X:{sym:"X",name:{en:"Pauli-X — quantum NOT",zh:"Pauli-X —— 量子 NOT"},
+     mat:()=>[[[0,0],[1,0]],[[1,0],[0,0]]],
+     math:"[ 0  1 ]\n[ 1  0 ]",
+     desc:{en:"Flips 0 to 1 and 1 to 0 — the quantum version of the NOT gate.",zh:"將 0 變 1、1 變 0——量子版嘅 NOT 閘。"}},
+  Y:{sym:"Y",name:{en:"Pauli-Y — flip + phase",zh:"Pauli-Y —— 翻轉＋相位"},
+     mat:()=>[[[0,0],[0,-1]],[[0,1],[0,0]]],
+     math:"[ 0  −i ]\n[ i   0 ]",
+     desc:{en:"Flips the bit and twists the phase — a combined X and Z rotation.",zh:"翻轉位元兼扭轉相位——X 同 Z 旋轉嘅結合。"}},
+  Z:{sym:"Z",name:{en:"Pauli-Z — phase flip",zh:"Pauli-Z —— 相位翻轉"},
+     mat:()=>[[[1,0],[0,0]],[[0,0],[-1,0]]],
+     math:"[ 1   0 ]\n[ 0  −1 ]",
+     desc:{en:"Leaves 0 alone, flips the sign of 1. Invisible in probabilities — watch the phase dot instead.",zh:"0 不變，1 變號。機率上睇唔到——睇相位色點。"}},
+  S:{sym:"S",name:{en:"S — quarter phase",zh:"S —— 四分之一相位"},
+     mat:()=>[[[1,0],[0,0]],[[0,0],[0,1]]].map((r,ri)=>r.map((c,ci)=>(ri===1&&ci===1)?[0,1]:c)),
+     math:"[ 1  0 ]\n[ 0  i ]",
+     desc:{en:"Rotates the phase of 1 by a quarter turn (90°). The square root of Z.",zh:"將 1 嘅相位轉四分之一圈（90°）。Z 嘅平方根。"}},
+  T:{sym:"T",name:{en:"T — eighth phase",zh:"T —— 八分之一相位"},
+     mat:()=>{const p=[Math.cos(Math.PI/4),Math.sin(Math.PI/4)];return [[[1,0],[0,0]],[[0,0],p]];},
+     math:"[ 1  0      ]\n[ 0  e^(iπ/4) ]",
+     desc:{en:"Rotates the phase of 1 by an eighth turn (45°). The square root of S — the gate that unlocks universal quantum computation.",zh:"將 1 嘅相位轉八分之一圈（45°）。S 嘅平方根——令量子計算變得通用嘅關鍵閘。"}},
+  Rx:{sym:"Rx",sub:"π/2",name:{en:"Rx(π/2) — rotate about X",zh:"Rx(π/2) —— 繞 X 軸旋轉"},
+     mat:()=>[[[SQRT1_2,0],[0,-SQRT1_2]],[[0,-SQRT1_2],[SQRT1_2,0]]],
+     math:"1/√2 · [ 1  −i ]\n        [ −i  1 ]",
+     desc:{en:"Spins the Bloch arrow a quarter turn around the X axis.",zh:"將布洛赫箭繞 X 軸轉四分之一圈。"}},
+  Ry:{sym:"Ry",sub:"π/2",name:{en:"Ry(π/2) — rotate about Y",zh:"Ry(π/2) —— 繞 Y 軸旋轉"},
+     mat:()=>[[[SQRT1_2,0],[-SQRT1_2,0]],[[SQRT1_2,0],[SQRT1_2,0]]],
+     math:"1/√2 · [ 1  −1 ]\n        [ 1   1 ]",
+     desc:{en:"Spins the Bloch arrow a quarter turn around the Y axis.",zh:"將布洛赫箭繞 Y 軸轉四分之一圈。"}},
+  CNOT:{sym:"⊕",wide:true,name:{en:"CNOT — entangle two qubits",zh:"CNOT —— 糾纏兩個量子位元"},
+     mat:null,math:"control q₀ ──●──\n             │\n target q₁ ──⊕──  (flips q₁ iff q₀ = 1)",
+     desc:{en:"If the top qubit is 1, it flips the bottom one. This is the gate that creates entanglement — the heart of Bell pairs and teleportation.",zh:"如果上面個量子位元係 1，就翻轉下面嗰個。製造糾纏嘅閘——貝爾對同量子傳送嘅核心。"}}
+};
+const GATE_ORDER=["H","X","Y","Z","S","T","Rx","Ry","CNOT"];
+const KETS=["|00⟩","|01⟩","|10⟩","|11⟩"];
+const COLS=8;
+
+/* Apply a single-qubit gate matrix to qubit q (0 or 1) of a 4-amp state. */
+function applySingle(state,m,q){
+  const out=state.map(()=>[0,0]);
+  for(let i=0;i<4;i++){
+    const bit=(i>>q)&1;
+    for(let row=0;row<2;row++){
+      const mel=m[row][bit];
+      const j=(i&~(1<<q))|(row<<q);
+      out[j]=cx.add(out[j],cx.mul(mel,state[i]));
+    }
+  }
+  return out;
+}
+/* CNOT with control q0 (top wire), target q1 (bottom wire). */
+function applyCNOT(state){
+  const out=state.map(()=>[0,0]);
+  for(let i=0;i<4;i++){
+    const q0=i&1,q1=(i>>1)&1;
+    const j=q0?(i^2):i; // flip q1 bit when q0 = 1
+    out[j]=state[i].slice();
+  }
+  return out;
+}
+function applyGate(state,g){
+  if(g.type==="CNOT")return applyCNOT(state);
+  return applySingle(state,GATES[g.type].mat(),g.row);
+}
+/* Reduced density matrix + Bloch vector for qubit q. */
+function blochOf(state,q){
+  // rho01 / rho00 / rho11 via partial trace
+  let r00=0,r11=0,r01=[0,0];
+  for(let a=0;a<2;a++)for(let b=0;b<2;b++){
+    // partial trace: sum over the other qubit k, vary qubit q
+    for(let k=0;k<2;k++){
+      const ia=q===0?(a+k*2):(k+a*2), ib=q===0?(b+k*2):(k+b*2);
+      const v=cx.mul(state[ia],cx.conj(state[ib]));
+      if(a===0&&b===0)r00+=v[0];
+      if(a===1&&b===1)r11+=v[0];
+      if(a===0&&b===1)r01=cx.add(r01,v);
+    }
+  }
+  return [2*r01[0],-2*r01[1],r00-r11];
+}
+/* Concurrence of a 2-qubit pure state: 0 = separable, 1 = maximally entangled. */
+function concurrence(s){
+  const det=cx.add(cx.mul(s[0],s[3]),[-cx.mul(s[1],s[2])[0],-cx.mul(s[1],s[2])[1]]);
+  return Math.min(1,2*Math.hypot(det[0],det[1]));
+}
+
+/* ================= 2. Circuit model ================= */
+let gates=[];          // [{type,row,col}] row: 0,1 or 'x' for CNOT
+let stepCount=0;       // gates applied (scrubber)
+const gateKey=g=>g.type+(g.type==="CNOT"?"x"+g.col:g.row+""+g.col);
+function gatesAt(col){return gates.filter(g=>g.col===col).sort((a,b)=>(a.row==="x"?-1:a.row)-(b.row==="x"?-1:b.row));}
+function orderedGates(){ // column-major, top wire first
+  return gates.slice().sort((a,b)=>a.col-b.col||((a.row==="x"?0:a.row)-(b.row==="x"?0:b.row)));
+}
+function statesUpTo(){
+  const og=orderedGates(),states=[[[1,0],[0,0],[0,0],[0,0]]];
+  let s=states[0];
+  for(const g of og){s=applyGate(s,g);states.push(s);}
+  return states;
+}
+function occupied(row,col){return gates.some(g=>g.col===col&&(g.row===row||g.row==="x"||(g.type==="CNOT")));}
+function tryPlace(type,row,col){
+  if(col<0||col>=COLS)return false;
+  if(type==="CNOT"){
+    if(occupied(0,col)||occupied(1,col))return false;
+    gates.push({type,row:"x",col});
+  }else{
+    if(occupied(row,col))return false;
+    gates.push({type,row,col});
+  }
+  afterEdit();return true;
+}
+function removeAt(row,col){
+  const i=gates.findIndex(g=>g.col===col&&(g.row===row||g.row==="x"));
+  if(i>=0){gates.splice(i,1);afterEdit();}
+}
+function afterEdit(){stepCount=orderedGates().length;syncStepUI();renderCircuit();update();saveHash();}
+
+/* ================= 3. i18n + theme ================= */
+let lang=localStorage.getItem("qmo-lang")||"en";
+function applyLang(){
+  document.documentElement.lang=lang==="zh"?"zh":"en";
+  document.querySelectorAll("[data-en]").forEach(el=>{
+    el.textContent=lang==="zh"?el.dataset.zh:el.dataset.en;});
+  document.getElementById("langBtn").textContent=lang==="zh"?"En":"文";
+  renderPalette();renderPresets();renderGlossary();renderStateVec(currentState());
+}
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),1800);}
+document.getElementById("langBtn").onclick=()=>{lang=lang==="zh"?"en":"zh";
+  localStorage.setItem("qmo-lang",lang);applyLang();};
+let theme=localStorage.getItem("qmo-theme")||"silver";
+function applyTheme(){document.documentElement.dataset.theme=theme;
+  document.querySelectorAll(".tdot").forEach(d=>d.classList.toggle("on",d.dataset.t===theme));}
+document.querySelectorAll(".tdot").forEach(d=>d.onclick=()=>{theme=d.dataset.t;
+  localStorage.setItem("qmo-theme",theme);applyTheme();});
+
+/* ================= 4. Palette / circuit rendering ================= */
+const paletteEl=document.getElementById("palette");
+let armed=null; // gate type armed by tap
+function renderPalette(){
+  paletteEl.innerHTML="";
+  for(const t of GATE_ORDER){
+    const g=GATES[t],d=document.createElement("div");
+    d.className="gate"+(g.wide?" wide":"")+(t==="CNOT"?" cnot":"")+(armed===t?" armed":"");
+    d.draggable=true;
+    d.innerHTML=`<span>${g.sym}${g.sub?`<span style="font-size:10px">${g.sub}</span>`:""}</span><small>${t==="CNOT"?(lang==="zh"?"糾纏":"CNOT"):t}</small>`;
+    d.title=lang==="zh"?g.name.zh:g.name.en;
+    d.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/gate",t);});
+    d.addEventListener("click",()=>{armed=armed===t?null:t;renderPalette();
+      if(armed)toast(lang==="zh"?"已選 "+t+"：撳電路空格放置":"Picked "+t+": tap a circuit slot");});
+    paletteEl.appendChild(d);
+  }
+}
+const circuitEl=document.getElementById("circuit");
+function renderCircuit(){
+  circuitEl.innerHTML="";
+  for(let row=0;row<2;row++){
+    const w=document.createElement("div");w.className="wire";
+    w.innerHTML=`<div class="line"></div><div class="qlabel">q<sub>${row}</sub></div>`;
+    const slots=document.createElement("div");slots.className="slots";
+    for(let col=0;col<COLS;col++){
+      const s=document.createElement("div");s.className="slot";s.dataset.row=row;s.dataset.col=col;
+      const g=gates.find(x=>x.col===col&&(x.row===row||x.row==="x"));
+      if(g){
+        const pg=document.createElement("div");pg.className="pgate"+(g.type==="CNOT"?" cnot2":"");
+        const sym=g.type==="CNOT"?(row===0?"●":"⊕"):GATES[g.type].sym;
+        pg.innerHTML=`<span>${sym}</span><span class="cx">✕</span>`;
+        pg.title=(lang==="zh"?"撳一下移除 · ":"Click to remove · ")+(lang==="zh"?GATES[g.type].name.zh:GATES[g.type].name.en);
+        pg.addEventListener("click",e=>{e.stopPropagation();removeAt(row,col);});
+        s.appendChild(pg);
+      }
+      s.addEventListener("dragover",e=>{e.preventDefault();s.classList.add("over");});
+      s.addEventListener("dragleave",()=>s.classList.remove("over"));
+      s.addEventListener("drop",e=>{e.preventDefault();s.classList.remove("over");
+        const t=e.dataTransfer.getData("text/gate");if(t)dropGate(t,row,col,s);});
+      s.addEventListener("click",()=>{if(armed){dropGate(armed,row,col,s);}});
+      slots.appendChild(s);
+    }
+    w.appendChild(slots);circuitEl.appendChild(w);
+  }
+}
+function dropGate(t,row,col,slotEl){
+  if(!tryPlace(t,row,col)){
+    slotEl.classList.add("shake");setTimeout(()=>slotEl.classList.remove("shake"),350);
+    toast(lang==="zh"?"呢格已經有閘":"That slot is occupied");
+  }else{armed=null;renderPalette();}
+}
+
+/* ================= 5. Presets ================= */
+const PRESETS=[
+  {id:"empty",g:[]},
+  {id:"coin",g:[{type:"H",row:0,col:0}]},
+  {id:"bell",g:[{type:"H",row:0,col:0},{type:"CNOT",row:"x",col:1}]},
+  {id:"phase",g:[{type:"H",row:0,col:0},{type:"S",row:0,col:1},{type:"H",row:0,col:2}]},
+  {id:"flip",g:[{type:"X",row:1,col:0}]},
+];
+const PRESET_NAME={empty:{en:"Empty",zh:"清空"},coin:{en:"🪙 Quantum coin",zh:"🪙 量子銀仔"},
+  bell:{en:"🔗 Bell pair",zh:"🔗 貝爾對"},phase:{en:"🌊 Phase dance",zh:"🌊 相位之舞"},flip:{en:"↔ Bit flip",zh:"↔ 位元翻轉"}};
+function renderPresets(){
+  const el=document.getElementById("presets");el.innerHTML="";
+  for(const p of PRESETS){
+    const b=document.createElement("button");b.className="preset";
+    b.textContent=lang==="zh"?PRESET_NAME[p.id].zh:PRESET_NAME[p.id].en;
+    b.onclick=()=>{gates=p.g.map(x=>({...x}));afterEdit();};
+    el.appendChild(b);
+  }
+}
+document.getElementById("clearBtn").onclick=()=>{gates=[];afterEdit();};
+document.getElementById("diceBtn").onclick=()=>{
+  gates=[];const types=GATE_ORDER.filter(t=>t!=="CNOT");
+  const n=3+Math.floor(Math.random()*3);
+  for(let i=0;i<n;i++){
+    const t=types[Math.floor(Math.random()*types.length)];
+    if(Math.random()<0.25){tryPlace("CNOT",0,i%COLS);}
+    else tryPlace(t,Math.random()<0.5?0:1,i%COLS);
+  }
+  toast(lang==="zh"?"隨機電路完成！":"Random circuit ready!");
+};
+document.getElementById("linkBtn").onclick=async()=>{
+  saveHash();
+  try{await navigator.clipboard.writeText(location.href);
+    toast(lang==="zh"?"連結已複製":"Link copied");}
+  catch(e){toast(location.href);}
+};
+document.getElementById("jsonBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify({app:"Quantum Mo",gates:orderedGates()},null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="quantum-mo-circuit.json";a.click();URL.revokeObjectURL(a.href);
+};
+function saveHash(){
+  const s=orderedGates().map(g=>g.type+(g.row==="x"?"x":g.row)+g.col).join(",");
+  history.replaceState(null,"",s?"#c="+s:(location.pathname+location.search));
+}
+function loadHash(){
+  const m=location.hash.match(/#c=([A-Za-z0-9+,]+)/);
+  const q=new URLSearchParams(location.search).get("p");
+  if(m){
+    gates=[];
+    for(const tok of m[1].split(",")){
+      const mm=tok.match(/^(H|X|Y|Z|S|T|Rx|Ry|CNOT)(x|[01])(\d)$/);
+      if(mm)tryPlaceSilent(mm[1],mm[2]==="x"?"x":+mm[2],+mm[3]);
+    }
+  }else if(q){
+    const p=PRESETS.find(x=>x.id===q);
+    if(p)gates=p.g.map(x=>({...x}));
+  }
+}
+function tryPlaceSilent(type,row,col){
+  if(type==="CNOT"){if(!occupied(0,col)&&!occupied(1,col))gates.push({type,row:"x",col});}
+  else if(!occupied(row,col))gates.push({type,row,col});
+}
+
+/* ================= 6. Step scrubber ================= */
+const stepRange=document.getElementById("stepRange"),stepLbl=document.getElementById("stepLbl");
+function syncStepUI(){
+  const n=orderedGates().length;
+  stepRange.max=n;stepRange.value=stepCount;
+  stepLbl.textContent=`${stepCount} / ${n}`;
+}
+stepRange.addEventListener("input",()=>{stepCount=+stepRange.value;stepLbl.textContent=`${stepCount} / ${orderedGates().length}`;update();});
+let playing=null;
+document.getElementById("playBtn").onclick=function(){
+  if(playing){clearInterval(playing);playing=null;this.textContent="▶";return;}
+  const n=orderedGates().length;if(!n){toast(lang==="zh"?"電路係空嘅":"Circuit is empty");return;}
+  stepCount=0;this.textContent="⏸";
+  playing=setInterval(()=>{
+    stepCount++;syncStepUI();update();
+    if(stepCount>=n){clearInterval(playing);playing=null;document.getElementById("playBtn").textContent="▶";}
+  },650);
+};
+function currentState(){
+  const sts=statesUpTo();
+  return sts[Math.min(stepCount,sts.length-1)];
+}
+
+/* ================= 7. Readouts ================= */
+function renderStateVec(state){
+  const el=document.getElementById("stateVec");el.innerHTML="";
+  state.forEach((a,i)=>{
+    const mag=Math.sqrt(cx.abs2(a));
+    const row=document.createElement("div");row.className="state-row";
+    row.innerHTML=`<span class="ket">${KETS[i]}</span>
+      <div><div class="ampbar"><i style="width:${(mag*100).toFixed(1)}%;background:hsl(${cx.hue(a)},75%,55%)"></i></div>
+      <div class="cval">${cx.str(a)}</div></div>
+      <span class="pdot" style="background:hsl(${cx.hue(a)},75%,55%)"></span>`;
+    el.appendChild(row);
+  });
+}
+function update(){
+  const state=currentState();
+  renderStateVec(state);
+  // probabilities
+  const pe=document.getElementById("probs");pe.innerHTML="";
+  state.forEach((a,i)=>{
+    const p=cx.abs2(a);
+    const row=document.createElement("div");row.className="prow";
+    row.innerHTML=`<span class="ket">${KETS[i]}</span>
+      <div class="ampbar"><i style="width:${(p*100).toFixed(1)}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></i></div>
+      <span class="pct">${(p*100).toFixed(1)}%</span>`;
+    pe.appendChild(row);
+  });
+  // entanglement
+  const c=concurrence(state);
+  document.querySelector("#entBar i").style.width=(c*100).toFixed(1)+"%";
+  document.getElementById("entVal").textContent=(c*100).toFixed(0)+"% · "+
+    (c>0.95?(lang==="zh"?"最大糾纏":"maximally entangled"):c>0.05?(lang==="zh"?"糾纏中":"entangled"):(lang==="zh"?"可分離":"separable"));
+  // bloch spheres
+  drawBloch(document.getElementById("bloch0"),blochOf(state,0),rot[0]);
+  drawBloch(document.getElementById("bloch1"),blochOf(state,1),rot[1]);
+}
+
+/* ================= 8. Bloch sphere renderer ================= */
+const rot=[{yaw:0.6,pitch:0.5},{yaw:-0.5,pitch:0.4}];
+function proj(v,r,yaw,pitch){
+  const [x,y,z]=v;
+  const x1=x*Math.cos(yaw)-y*Math.sin(yaw), y1=x*Math.sin(yaw)+y*Math.cos(yaw);
+  const y2=y1*Math.cos(pitch)-z*Math.sin(pitch), z2=y1*Math.sin(pitch)+z*Math.cos(pitch);
+  return [x1*r, -y2*r, z2]; // screen x,y + depth
+}
+function drawBloch(cv,bv,rr){
+  const ctx=cv.getContext("2d"),W=cv.width,H=cv.height,cx0=W/2,cy0=H/2,R=W*0.36;
+  const css=getComputedStyle(document.documentElement);
+  const ink=css.getPropertyValue("--ink").trim(),mut=css.getPropertyValue("--muted").trim(),
+        line=css.getPropertyValue("--line").trim(),acc=css.getPropertyValue("--accent").trim();
+  ctx.clearRect(0,0,W,H);
+  // sphere + wireframe
+  ctx.strokeStyle=line;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(cx0,cy0,R,0,7);ctx.stroke();
+  ctx.strokeStyle=mut;ctx.globalAlpha=.45;ctx.lineWidth=1;
+  for(const e of[-60,-30,30,60]){ // latitude ellipses
+    ctx.beginPath();
+    ctx.ellipse(cx0,cy0,R,R*Math.abs(Math.sin(e*Math.PI/180)),0,0,7);ctx.stroke();
+  }
+  for(let k=0;k<4;k++){ // longitude ellipses
+    const a=rr.yaw+k*Math.PI/4;
+    ctx.beginPath();ctx.ellipse(cx0,cy0,R*Math.abs(Math.cos(a)),R,0,0,7);ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // axes
+  const axes=[{v:[1,0,0],l:"x"},{v:[0,1,0],l:"y"},{v:[0,0,1],l:"|0⟩"},{v:[0,0,-1],l:"|1⟩"}];
+  ctx.font="22px 'Dela Gothic One',sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+  for(const a of axes){
+    const [sx,sy]=proj(a.v,R,rr.yaw,rr.pitch);
+    ctx.strokeStyle=mut;ctx.beginPath();ctx.moveTo(cx0-sx,cy0-sy);ctx.lineTo(cx0+sx,cy0+sy);ctx.stroke();
+    ctx.fillStyle=a.l.startsWith("|")?ink:mut;
+    ctx.fillText(a.l,cx0+sx*1.18,cy0+sy*1.18);
+  }
+  // bloch vector arrow
+  const len=Math.hypot(bv[0],bv[1],bv[2]);
+  if(len>0.01){
+    // arrow length shrinks with mixedness automatically since |bv|<=1
+    const t2=proj([bv[0],bv[1],bv[2]],R,rr.yaw,rr.pitch);
+    ctx.strokeStyle=acc;ctx.lineWidth=4;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(cx0,cy0);ctx.lineTo(cx0+t2[0],cy0+t2[1]);ctx.stroke();
+    ctx.fillStyle=acc;ctx.beginPath();ctx.arc(cx0+t2[0],cy0+t2[1],7,0,7);ctx.fill();
+    // faint full-length guide when mixed
+    if(len<0.98){ctx.globalAlpha=.3;ctx.lineWidth=1.5;
+      const full=proj([bv[0]/len,bv[1]/len,bv[2]/len],R,rr.yaw,rr.pitch);
+      ctx.beginPath();ctx.moveTo(cx0,cy0);ctx.lineTo(cx0+full[0],cy0+full[1]);ctx.stroke();ctx.globalAlpha=1;}
+  }
+  ctx.fillStyle=mut;ctx.font="16px sans-serif";
+  ctx.fillText("r="+len.toFixed(2),cx0,cy0+R+16);
+}
+function bindBlochDrag(cv,i){
+  let drag=null;
+  cv.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,yaw:rot[i].yaw,pitch:rot[i].pitch};cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener("pointermove",e=>{if(!drag)return;
+    rot[i].yaw=drag.yaw+(e.clientX-drag.x)*0.01;rot[i].pitch=Math.max(-1.4,Math.min(1.4,drag.pitch+(e.clientY-drag.y)*0.01));
+    update();});
+  cv.addEventListener("pointerup",()=>drag=null);
+}
+bindBlochDrag(document.getElementById("bloch0"),0);
+bindBlochDrag(document.getElementById("bloch1"),1);
+document.getElementById("pngBtn").onclick=()=>{
+  const a=document.createElement("a");
+  const c0=document.getElementById("bloch0"),c1=document.getElementById("bloch1");
+  const big=document.createElement("canvas");big.width=620;big.height=300;
+  const bctx=big.getContext("2d");
+  const css=getComputedStyle(document.documentElement);
+  bctx.fillStyle=css.getPropertyValue("--panel").trim()||"#fff";bctx.fillRect(0,0,620,300);
+  bctx.drawImage(c0,10,0,300,300);bctx.drawImage(c1,310,0,300,300);
+  a.href=big.toDataURL("image/png");a.download="quantum-mo-bloch.png";a.click();
+};
+
+/* ================= 9. 1000-shot sampler ================= */
+const shotsEl=document.getElementById("shots");
+function renderShots(counts){
+  shotsEl.innerHTML="";
+  const total=counts.reduce((a,b)=>a+b,0)||1;
+  counts.forEach((n,i)=>{
+    const d=document.createElement("div");d.className="shot";
+    d.innerHTML=`<div class="sk">${KETS[i]}</div><div class="sb"><i style="height:2px"></i></div><div class="sc">${n} ×</div>`;
+    shotsEl.appendChild(d);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      d.querySelector("i").style.height=Math.max(2,(n/total)*100*0.64)+"px";}));
+  });
+}
+renderShots([0,0,0,0]);
+document.getElementById("shootBtn").onclick=()=>{
+  const state=currentState(),probs=state.map(cx.abs2),counts=[0,0,0,0];
+  for(let s=0;s<1000;s++){
+    let r=Math.random(),i=0;
+    while(i<3&&r>probs[i]){r-=probs[i];i++;}
+    counts[i]++;
+  }
+  renderShots(counts);
+};
+
+/* ================= 10. Glossary ================= */
+function renderGlossary(){
+  const el=document.getElementById("ggrid");el.innerHTML="";
+  for(const t of GATE_ORDER){
+    const g=GATES[t],d=document.createElement("div");d.className="gitem";
+    d.innerHTML=`<div class="gs">${g.sym}${g.sub?`<span style="font-size:11px">${g.sub}</span>`:""}</div>
+      <div class="gn">${lang==="zh"?g.name.zh:g.name.en}</div>
+      <div class="gm">${g.math.split("\n")[0]}…</div>`;
+    d.onclick=()=>{
+      document.getElementById("gmTitle").textContent=g.sym+(g.sub?" "+g.sub:"")+" · "+(lang==="zh"?g.name.zh:g.name.en);
+      document.getElementById("gmMath").textContent=g.math;
+      document.getElementById("gmDesc").textContent=lang==="zh"?g.desc.zh:g.desc.en;
+      document.getElementById("gmodal").classList.add("open");
+    };
+    el.appendChild(d);
+  }
+}
+document.getElementById("gmClose").onclick=()=>document.getElementById("gmodal").classList.remove("open");
+document.getElementById("gmodal").addEventListener("click",e=>{if(e.target.id==="gmodal")e.target.classList.remove("open");});
+
+/* ================= 11. Boot ================= */
+loadHash();
+applyTheme();
+applyLang();      // renders palette, presets, glossary, state vec
+renderCircuit();
+stepCount=orderedGates().length;
+syncStepUI();
+update();
+})();
+</script>
+</body>
+</html>
