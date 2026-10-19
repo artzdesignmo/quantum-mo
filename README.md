@@ -4,7 +4,7 @@ Drag quantum gates onto a 2-qubit circuit and watch superposition, phase and ent
 
 **Live demo:** https://artzdesignmo.github.io/quantum-mo/
 
-![Quantum Mo — Bell pair circuit with live Bloch spheres](screenshot.png)
+![Quantum Mo — Bell pair circuit with live Bloch spheres](screenshot.PNG)
 
 ## Features
 
